@@ -3,6 +3,8 @@ from pydantic import BaseModel, Field
 
 # ---- Core types ----
 OutputKind = Literal["text", "diagram", "image", "audio", "video"]
+TextDepth = Literal["brief", "detailed", "very_detailed"]
+SegmentKind = Literal["content", "diagram", "image"]
 
 class NormalizeRequest(BaseModel):
     chat: str
@@ -13,9 +15,13 @@ class TaskSpec(BaseModel):
     audience: Optional[str] = "general"
     language: Optional[str] = "en"
     difficulty: Optional[str] = "intro"
-    outputs: List[OutputKind] = Field(default_factory=lambda: ["text","diagram"])
+    outputs: List[OutputKind] = Field(default_factory=lambda: ["text", "diagram", "image"])
     keywords: List[str] = Field(default_factory=list)
     image_ideas: List[str] = Field(default_factory=list)
+    # content richness and minimum assets
+    text_depth: TextDepth = "very_detailed"
+    min_diagrams: int = 2   # default: 2 diagrams if user didn’t specify
+    min_images: int = 2     # default: 2 images if user didn’t specify
 
 class HelpfulNotesRequest(BaseModel):
     queries: List[str]
@@ -43,9 +49,13 @@ class GenerateRequest(BaseModel):
 
 # ---- Lesson models (draft JSON) ----
 class LessonSegment(BaseModel):
+    section: Optional[str] = None
+    kind: SegmentKind = "content"
     text: str
+    text_format: Literal["md", "plain"] = "md"
     mermaid: Optional[str] = None
     image_prompt: Optional[str] = None
+    alt_text: Optional[str] = None
 
 class LessonDraft(BaseModel):
     title: str
