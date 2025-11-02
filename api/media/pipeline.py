@@ -8,7 +8,7 @@ def render_assets_for_lesson(lesson: Dict[str, Any], out_root: str, image_concur
     """
     Enrich a LessonDraft-like dict by rendering Mermaid diagrams and generating images.
     - Diagrams: diagram_{i}.png (serial)
-    - Images: img_{i}.png (parallel, capped by image_concurrency)
+    - Images:   img_{i}.png (parallel, capped by image_concurrency)
     Returns the same dict with segments[i].diagram_path / image_path added.
     """
     segs: List[Dict[str, Any]] = list(lesson.get("segments", []))
@@ -21,21 +21,19 @@ def render_assets_for_lesson(lesson: Dict[str, Any], out_root: str, image_concur
     # 1) Mermaid → PNG
     for i, seg in enumerate(segs):
         mmd = seg.get("mermaid")
-        if mmd:
+        if isinstance(mmd, str) and mmd.strip():
             out_path = os.path.join(diag_dir, f"diagram_{i}.png")
             ok = render_mermaid(mmd, out_path)
             seg["diagram_path"] = out_path if ok else ""
 
-    # 2) Image prompts → PNG (parallel, max 5)
-    # prompts = [(i, seg["image_prompt"].strip())
-    #            for i, seg in enumerate(segs)
-    #            if isinstance(seg.get("image_prompt"), str) and seg["image_prompt"].strip()]
+    # 2) Image prompts → PNG (parallel)
     prompts = []
     for i, seg in enumerate(segs):
         p = seg.get("image_prompt")
-        if p and isinstance(p, str) and p.strip():
+        if isinstance(p, str) and p.strip():
             enriched = enrich_image_prompt(p.strip(), topic=lesson.get("title"))
             prompts.append((i, enriched))
+
     if prompts:
         saved = gen_images(prompts, out_dir=img_dir, concurrency=image_concurrency)
         for i, path in saved.items():

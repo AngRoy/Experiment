@@ -2,8 +2,9 @@ import os, re, json
 from typing import Any, Dict, List, Optional
 from google import genai
 from google.genai import types
+import itertools
 
-DEFAULT_TEXT_MODEL = os.getenv("GEMINI_TEXT_MODEL", "gemini-2.0-flash-lite")
+DEFAULT_TEXT_MODEL = os.getenv("GEMINI_TEXT_MODEL", "gemini-2.0-flash")
 
 def _client():
     api_key = os.getenv("GEMINI_API_KEY")
@@ -91,21 +92,34 @@ def _extract_mermaid(val: Any) -> Optional[str]:
 
 def _sanitize_segment(seg: Dict[str, Any]) -> Dict[str, Any]:
     s = dict(seg or {})
-    # text
-    if not isinstance(s.get("text"), str):
-        s["text"] = "" if s.get("text") is None else str(s.get("text"))
+    raw_text = s.get("text")
+    if not isinstance(raw_text, str):
+        raw_text = "" if raw_text is None else str(raw_text)
+
+    # If mermaid leaked into text, pull it out
+    text_wo_mermaid, mermaid_in_text = _pop_mermaid_from_text(raw_text)
+
     # text_format
     if s.get("text_format") not in ("md", "plain"):
         s["text_format"] = "md"
-    # mermaid
-    mer = _extract_mermaid(s.get("mermaid"))
+
+    # mermaid: prefer explicit field, else from text
+    mer = _extract_mermaid(s.get("mermaid")) or mermaid_in_text
+    if isinstance(mer, str):
+        mer = _strip_mermaid_brittle_lines(mer)
     s["mermaid"] = mer
+
+    # final text
+    s["text"] = text_wo_mermaid
+
     # image_prompt
     ip = _coerce_str(s.get("image_prompt"))
     s["image_prompt"] = ip.strip() if isinstance(ip, str) else None
+
     # alt_text
     at = _coerce_str(s.get("alt_text"))
     s["alt_text"] = at.strip() if isinstance(at, str) else None
+
     # kind inference
     if s.get("mermaid"):
         s["kind"] = "diagram"
@@ -125,6 +139,61 @@ def sanitize_lesson(lesson: Dict[str, Any]) -> Dict[str, Any]:
     if isinstance(lesson.get("narration"), str):
         out["narration"] = lesson["narration"]
     return out
+
+def _strip_mermaid_brittle_lines(code: str) -> str:
+    """Reduce renderer breakage: drop fragile style/class lines that often error."""
+    lines = [ln for ln in (code or "").splitlines()]
+    safe = []
+    for ln in lines:
+        l = ln.strip()
+        if l.lower().startswith("style "):    # common breakage
+            continue
+        if l.lower().startswith("classdef "): # styling often trips CLI
+            continue
+        safe.append(ln)
+    return "\n".join(safe).strip()
+
+def _pop_mermaid_from_text(md: str) -> tuple[str, Optional[str]]:
+    """
+    Find a mermaid block inside Markdown text and remove it from the text.
+    Support both ```mermaid fenced blocks and unfenced blocks starting with 'graph'/'flowchart'.
+    Return (clean_text, mermaid or None).
+    """
+    if not isinstance(md, str) or not md.strip():
+        return md or "", None
+
+    # 1) fenced ```mermaid ... ```
+    m = re.search(r"```mermaid\s*([\s\S]*?)```", md, flags=re.IGNORECASE)
+    if m:
+        code = m.group(1).strip()
+        code = _strip_mermaid_brittle_lines(code)
+        md2 = md[:m.start()] + md[m.end():]
+        return md2.strip(), (code if code else None)
+
+    # 2) unfenced: look for a block that starts with graph/flowchart and ends at first blank-line sequence
+    lines = md.splitlines()
+    start = None
+    for i, ln in enumerate(lines):
+        low = ln.strip().lower()
+        if low.startswith("graph ") or low.startswith("flowchart "):
+            start = i
+            break
+    if start is not None:
+        # capture until a blank line separator (two consecutive blank lines or end)
+        block = []
+        for ln in itertools.islice(lines, start, None):
+            if ln.strip() == "" and (len(block) > 0 and block[-1].strip() == ""):
+                break
+            block.append(ln)
+        code = "\n".join(block).strip()
+        code = _strip_mermaid_brittle_lines(code)
+        # remove that block from text
+        kept = lines[:start] + lines[start+len(block):]
+        md2 = "\n".join(kept).strip()
+        return md2, (code if code else None)
+
+    return md, None
+
 
 # ---------- Normalization / Generation ----------
 

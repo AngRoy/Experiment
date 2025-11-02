@@ -1,0 +1,124 @@
+:root {
+  --bg: #0b0d10;
+  --panel: #12161b;
+  --text: #e6eef8;
+  --muted: #a9b3c2;
+  --accent: #7cc4ff;
+  --card: #151a20;
+  --border: #243041;
+  --green: #69db7c;
+  --red: #ff6b6b;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.container {
+  max-width: 1000px;
+  margin: 24px auto;
+  padding: 0 16px;
+}
+
+.header {
+  display: flex; gap: 12px; align-items: center; margin-bottom: 16px;
+}
+.title { font-size: 20px; font-weight: 700; }
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.row {
+  display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+}
+
+.input {
+  flex: 1;
+  min-width: 240px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  outline: none;
+}
+.input:focus { border-color: var(--accent); }
+
+.button {
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #1a242f;
+  color: var(--text);
+  cursor: pointer;
+}
+.button:hover { border-color: var(--accent); }
+
+.switch {
+  display: inline-flex; gap: 8px; align-items: center;
+  font-size: 14px; color: var(--muted);
+}
+
+.badge {
+  display: inline-block;
+  font-size: 12px;
+  padding: 2px 8px;
+  background: #192331;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+
+.grid {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+/* @media (min-width: 900px) {
+  .grid { grid-template-columns: 1fr 1fr; }
+} */
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.card h1, .card h2, .card h3 { margin: 6px 0; }
+.card p { color: var(--text); line-height: 1.45; }
+
+.asset {
+  width: 100%;
+  max-height: 420px;      /* cap */
+  object-fit: contain;    /* keep proportions */
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #fffbe6;    /* matches PNG bg; harmless for images with alpha */
+}
+
+/* Client-side Mermaid SVG wrapper */
+.mmd-wrap {
+  max-height: 420px;
+  overflow: auto;         /* scroll if too tall */
+  background: #fffbe6;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.meta { color: var(--muted); font-size: 12px; margin-top: 6px; }
+
+.footer-space { height: 28px; }
